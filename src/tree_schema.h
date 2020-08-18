@@ -34,6 +34,58 @@ struct ly_ctx;
 struct ly_set;
 
 /**
+ * @page howtoSchemas YANG Modules
+ *
+ * To be able to work with YANG data instances, libyang has to represent YANG data models. All the processed modules are stored
+ * in libyang [context](@ref howtocontext) and loaded using [parser functions](@ref howtoschemasparsers). It means, that there is
+ * no way to create/change YANG module programmatically. However, all the YANG model definitions are available and can be examined
+ * through the C structures. All the context's modules together form YANG Schema for the data being instantiated.
+ *
+ * Any YANG module is represented as ::lys_module. In fact, the module is represented in two different formats. As ::lys_module::parsed,
+ * there is a parsed schema reflecting the source YANG module. It is exactly what is read from the input. This format is good for
+ * converting from one format to another (YANG to YIN and vice versa), but it is not very useful for validating/manipulating YANG
+ * data. Therefore, there is ::lys_module::compiled storing the compiled YANG module. It is based on the parsed module, but all the
+ * references are resolved. It means that, for example, there are no `grouping`s or `typedef`s since they are supposed to be placed instead of
+ * `uses` or `type` references. This split also means, that the YANG module is fully validated after compilation of the parsed
+ * representation of the module. YANG submodules are available only in the parsed representation. When a submodule is compiled, it
+ * is fully integrated into its main module.
+ *
+ * The context can contain even modules without the compiled representation. Such modules are still useful as imports of other
+ * modules. The grouping or typedef definition can be even compiled into the importing modules. This is actually the main
+ * difference between the imported and implemented modules in the libyang context. The implemented modules are compiled while the
+ * imported modules are only parsed.
+ *
+ * The compiled schema tree nodes are able to hold private objects (::lysc_node::priv as a pointer to a structure, function, variable, ...) used by
+ * a caller application. Such an object can be assigned to a specific node using ::lysc_node_set_private() function.
+ * Note that the object is not freed by libyang when the context is being destroyed. So the caller is responsible
+ * for freeing the provided structure after the context is destroyed or the private pointer is set to NULL in
+ * appropriate schema nodes where the object was previously set. This can be automated via destructor function
+ * to free these private objects. The destructor is passed to the ::ly_ctx_destroy() function.
+ *
+ * - @subpage howtoSchemasParsers
+ * - @subpage howtoSchemasFeatures
+ * - @subpage howtoSchemasPlugins
+ * - @subpage howtoSchemasPrinters
+ *
+ * \note There are many functions to access information from the schema trees. Details are available in
+ * the [Schema Tree module](@ref schematree).
+ *
+ * For information about difference between implemented and imported modules, see the
+ * [context description](@ref howtoContext).
+ *
+ * Functions List (not assigned to above subsections)
+ * --------------------------------------------------
+ * - ::lys_getnext()
+ * - ::lys_parent()
+ * - ::lys_module()
+ * - ::lys_node_module()
+ * - ::lys_set_private()
+ * - ::lys_set_implemented()
+ * - ::lys_set_disabled()
+ * - ::lys_set_enabled()
+ */
+
+/**
  * @defgroup schematree Schema Tree
  * @ingroup trees
  * @{

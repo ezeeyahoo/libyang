@@ -28,42 +28,42 @@ struct lyd_node;
 struct lysc_node;
 
 /**
- * @page howtocontext Context
+ * @page howtoContext Context
  *
- * The context concept allows callers to work in environments with different sets of YANG schemas.
+ * The context concept allows callers to work in environments with different sets of YANG modules.
  *
- * The first step in libyang is to create a new context using ly_ctx_new(). It returns a handler
- * used in the following work.
+ * The first step with libyang is to create a new context using ly_ctx_new(). It returns a handler used in the following work.
+ * Note that the context is supposed to provide a stable environment for work with the data. Therefore the caller should prepare
+ * a complete context and after starting working with the data, the context and its content should not change. Despite the API
+ * does not enforce this approach, it may change in future versions in the form of a locking mechanism which would allow further
+ * optimization of data manipulation.
  *
- * When creating a new context, search dir can be specified (NULL is accepted) to provide directory
- * where libyang will automatically search for schemas being imported or included. The search path
- * can be later changed via ly_ctx_set_searchdir() and ly_ctx_unset_searchdir() functions. Before the search dirs,
- * also the current working directory is (non-recursively) searched. For the case of the explicitly set search
- * dirs, also all their subdirectories (and symlinks) are taken into account. Searching in the current working
- * directory can be avoided with the context's #LY_CTX_DISABLE_SEARCHDIR_CWD option (or via ly_ctx_set_options()).
+ * The context has [several options](@ref contextoptions) changing behavior when processing YANG modules being inserted. The
+ * specific behavior is mentioned below. All the options can be set as a parameter when the context is being created or later
+ * with ::ly_ctx_set_options().
+ *
+ * When creating a new context, another optional parametr is search_dir It provide directory where libyang
+ * will automatically search for YANG modules being imported or included. There is actually a set of search paths which can be later
+ * modified using ::ly_ctx_set_searchdir(), ::ly_ctx_unset_searchdir() and ::ly_ctx_unset_searchdir_last() functions. Before the values
+ * in the set are used, also the current working directory is (non-recursively) searched. For the case of the explicitly set
+ * search directories, they are searched recursively - all their subdirectories (and symlinks) are taken into account. Searching
+ * in the current working directory can be avoided with the context's ::LY_CTX_DISABLE_SEARCHDIR_CWD option.
  * Searching in all the context's search dirs (without removing them) can be avoided with the context's
- * #LY_CTX_DISABLE_SEARCHDIRS option (or via ly_ctx_set_options()). This automatic searching can be preceded
- * by a custom  module searching callback (#ly_module_imp_clb) set via ly_ctx_set_module_imp_clb(). The algorithm of
- * searching in search dirs is also available via API as lys_search_localfile() function.
+ * ::LY_CTX_DISABLE_SEARCHDIRS option (or via ::ly_ctx_set_options()). This automatic searching can be preceded
+ * by a custom  module searching callback (::ly_module_imp_clb) set via ::ly_ctx_set_module_imp_clb(). The algorithm of
+ * searching in search dirs is also available via API as ::lys_search_localfile() function.
  *
- * Schemas are added into the context using [parser functions](@ref howtoschemasparsers) - \b lys_parse_*().
- * Alternatively, also ly_ctx_load_module() can be used - in that case the #ly_module_imp_clb or automatic
- * search in search dir and in the current working directory is used. YANG submodules cannot be loaded or even validated
- * directly, they are loaded always only as includes of YANG modules.
- *
- * YANG schemas are loaded in two steps. First, the input YANG/YIN data are parsed into \b lysp_* structures that reflect
- * the structure of the input schema. Mostly just syntax checks are done, no reference or type checking is performed in
- * this step. If the module is supposed to be implemented, not just imported by another module, the second step is to compile
- * it. The compiled schema may significantly differ in structure from the source schema structure. All the references
- * are resolved, groupings are instantiated, types are resolved (and compiled by grouping all the relevant restrictions
- * when derived from another types) and many other syntactical checks are done.
+ * YANG modules are added into the context using [parser functions](@ref howtoSchemasParsers) - \b lys_parse*().
+ * Alternatively, also ::ly_ctx_load_module() can be used - in that case the ::ly_module_imp_clb or automatic
+ * search in search directories and in the current working directory is used, as described above. YANG submodules cannot be loaded
+ * or even validated directly, they are loaded always only as includes of YANG modules.
  *
  * Similarly, data trees can be parsed by \b lyd_parse_*() functions. Note, that functions for schemas have \b lys_
  * prefix (or \b lysp_ for the parsed and \b lysc_ for the compiled schema) while functions for instance data have
  * \b lyd_ prefix. It can happen during data parsing that a schema is required and __not found__ in the context or
  * the schema is found, but is __only imported__, not implemented (so the data cannot actually be instantiated).
  * In these cases, a callback is called, which should add this schema into the context or change its conformance
- * to implemented. You can set the callback using ly_ctx_set_module_data_clb() (more in @ref howtodataparsers
+ * to implemented. You can set the callback using ::ly_ctx_set_module_data_clb() (more in @ref howtodataparsers
  * and @ref howtodatavalidation).
  *
  * Context can hold multiple revisions of the same schema, but only one of them can be implemented. The schema is not
@@ -100,20 +100,23 @@ struct lysc_node;
  *
  * Functions List
  * --------------
+ *
  * - ::ly_ctx_new()
+ * - ::ly_ctx_destroy()
+ *
  * - ::ly_ctx_set_searchdir()
- * - ::ly_ctx_unset_searchdir()
- * - ::ly_ctx_unset_searchdirs()
  * - ::ly_ctx_get_searchdirs()
+ * - ::ly_ctx_unset_searchdir()
+ * - ::ly_ctx_unset_searchdir_last()
+ *
+ * - ::ly_ctx_set_options()
+ * - ::ly_ctx_get_options()
+ * - ::ly_ctx_unset_options()
+ *
  * - ::ly_ctx_set_module_imp_clb()
  * - ::ly_ctx_get_module_imp_clb()
- * - ::ly_ctx_set_module_data_clb()
- * - ::ly_ctx_get_module_data_clb()
- * - ::ly_ctx_set_options()
- * - ::ly_ctx_unset_options()
- * - ::ly_ctx_get_options()
+ *
  * - ::ly_ctx_load_module()
- * - ::ly_ctx_info()
  * - ::ly_ctx_get_module_iter()
  * - ::ly_ctx_get_module()
  * - ::ly_ctx_get_module_ns()
@@ -122,12 +125,22 @@ struct lysc_node;
  * - ::ly_ctx_get_module_latest()
  * - ::ly_ctx_get_module_latest_ns()
  * - ::ly_ctx_reset_latests()
+ *
  * - ::ly_ctx_get_module_set_id()
  * - ::ly_ctx_get_node()
- * - ::ly_ctx_find_path()
- * - ::ly_ctx_destroy()
- * - ::lys_set_implemented()
+ * - ::ly_ctx_get_yanglib_data()
+ * - ::ly_ctx_get_yanglib_id()
+ *
+ * - ::ly_ctx_internal_module_count()
  * - ::lys_search_localfile()
+ * - ::lys_set_implemented()
+ *
+ *
+ *
+ * - ::ly_ctx_set_module_data_clb()
+ * - ::ly_ctx_get_module_data_clb()
+ * - ::ly_ctx_info()
+ * - ::ly_ctx_find_path()
  */
 
 /**
